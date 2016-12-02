@@ -31,21 +31,26 @@ trace_t xTestTrace;
 
 void test_func1(void)
 {
+    // Use TRACE_FUNC() to indicate the function and line number
+    TRACE_FUNC(&xTestTrace);
     static int cnt = 0;
-    TRACE_AT(&xTestTrace);
+    // Simulate an error condition
     if ((++cnt % 3) == 0)
     {
-        TRACE_ERROR("Error occurred in func1 @", cnt);
+        // Use TRACE_FILE() to indicate the file name and line number
+        TRACE_FILE(&gxTraceError);
+        // Use TRACE_ERROR() to trace the first few errors
+        TRACE_ERROR("  Event @ func1", cnt);
     }
-    TRACE_AT(&xTestTrace);
 }
 
 void test_func2(void)
 {
+    TRACE_FUNC(&xTestTrace);
     static int cnt = 0;
     if ((++cnt % 5) == 0)
     {
-        TRACE_ERROR("Error occurred in func2 @", cnt);
+        TRACE_ERROR("  Event @ func2", cnt);
     }
 }
 
@@ -60,13 +65,13 @@ void main(void)
 
     // Step 4: Instrument your code with TRACE_ERROR(...) or trace(...)
     int idx;
+    trace(&xTestTrace, "Test Start", 0);
     for (idx = 0; idx < TEST_TRACE_DEPTH +6; idx++)
     {
-        trace(&xTestTrace, "Calling func1:", idx);
         test_func1();
-        trace(&xTestTrace, "Calling func2:", idx);
         test_func2();
     }
+    trace(&xTestTrace, "Test End", idx);
     // Step 5a: Call the following to dump the trace to your logger
     TRACE_ERROR_DUMP();
     trace_dump(&xTestTrace);

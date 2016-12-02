@@ -74,7 +74,7 @@ void trace_dump(trace_t *This)
     TRACE_LOCK();
 
     usOffset = (This->bIsWrap) ? This->usIdx : 0;
-    TRACE_OUTPUT(TRACE_NEWLINE "====TRACE %s(total:%d, depth:%d)====  " TRACE_NEWLINE, This->name, This->ulCount, This->usDepth);
+    TRACE_OUTPUT(TRACE_NEWLINE "====TRACE[%s] (total:%d, depth:%d)====  " TRACE_NEWLINE, This->name, This->ulCount, This->usDepth);
     // Output the trace buffer
     for (usIdx = 0; usIdx < This->usDepth; usIdx++)
     {
@@ -83,7 +83,7 @@ void trace_dump(trace_t *This)
         if (This->axLine[usIdy].pcMessage)
         {
             uint32_t ulValue = This->axLine[usIdy].ulValue;
-            TRACE_OUTPUT("  %6d| %s 0x%08x (%d)" TRACE_NEWLINE, usIdy, This->axLine[usIdy].pcMessage, ulValue, ulValue);
+            TRACE_OUTPUT("  %6d| %s: 0x%08x (%d)" TRACE_NEWLINE, usIdy, This->axLine[usIdy].pcMessage, ulValue, ulValue);
         }
     }
 

@@ -49,19 +49,20 @@ extern "C" {
 // This section maybe customized for platform specific debug facilities
 // #include "your_embedded_DEBUG_OUT_here.h"
 #include <stdio.h>
-#define TRACE_OUTPUT(...)       { printf(__VA_ARGS__); }
+#define TRACE_OUTPUT(...)       printf(__VA_ARGS__)
 //----Trace Configuration [END]----
 
 //----Trace Macros----
 // Convenience macro to instrument code
-#define TRACE_AT(pxTrace)         { trace(pxTrace, (char *) __func__, __LINE__); }
+#define TRACE_FILE(pxTrace)                     trace(pxTrace, "--"__FILE__ " @ line", __LINE__)
+#define TRACE_FUNC(pxTrace)                     trace(pxTrace, (char *)__func__, __LINE__)
 // [OPTIONAL] This is a convenience macro for logging errors
 #if TRACE_ERROR_DEPTH
     // Add this to the code to instrument
-    #define TRACE_ERROR(pcMessage, ulValue)    trace(&gxTraceError, pcMessage, ulValue)
+    #define TRACE_ERROR(pcMessage, ulValue)     trace(&gxTraceError, pcMessage, ulValue)
     // Add this at the very beginning to initialization
-    #define TRACE_ERROR_INIT()                 trace_init(&gxTraceError, "ERROR", gaxTraceLine, TRACE_ERROR_DEPTH, false)
-    #define TRACE_ERROR_DUMP()                 trace_dump(&gxTraceError)
+    #define TRACE_ERROR_INIT()                  trace_init(&gxTraceError, "ERROR", gaxTraceLine, TRACE_ERROR_DEPTH, false)
+    #define TRACE_ERROR_DUMP()                  trace_dump(&gxTraceError)
 #else
     #define TRACE_ERROR(pcMessage, ulValue)
     #define TRACE_ERROR_INIT()
