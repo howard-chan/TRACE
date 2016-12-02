@@ -33,7 +33,7 @@ void test_func1(void)
 {
     static int cnt = 0;
     TRACE_AT(&xTestTrace);
-    if (++cnt % 3 == 0)
+    if ((++cnt % 3) == 0)
     {
         TRACE_ERROR("Error occurred in func1 @", cnt);
     }
@@ -43,7 +43,7 @@ void test_func1(void)
 void test_func2(void)
 {
     static int cnt = 0;
-    if (++cnt % 5 == 0)
+    if ((++cnt % 5) == 0)
     {
         TRACE_ERROR("Error occurred in func2 @", cnt);
     }
