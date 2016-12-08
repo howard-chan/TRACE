@@ -23,15 +23,18 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
+/********************* System Headers ************************/
 #include <stdint.h>
 #include <stddef.h>
 #include <stdbool.h>
+
+/********************* Local Headers *************************/
 #include "trace.h"
 
-//---- External Globals----
+/********************* Global Variables **********************/
 #if TRACE_ERROR_DEPTH
 trace_t gxTraceError;
-trace_line_t gaxTraceLine[TRACE_ERROR_DEPTH];
+trace_line_t gaxTraceErrorLine[TRACE_ERROR_DEPTH];
 #endif // TRACE_ERROR_DEPTH
 
 void trace_init(trace_t *This, char *name, trace_line_t *pxLine, uint16_t usDepth, bool bIsWrap)
@@ -46,32 +49,46 @@ void trace_init(trace_t *This, char *name, trace_line_t *pxLine, uint16_t usDept
 
 void trace(trace_t *This, char *pcMessage, uint32_t ulValue)
 {
+    // Step 1: Lock the resource
     TRACE_LOCK();
-
-    // Only store if there is room in the buffer
+    // Step 2: Always count the number of trace calls
+    This->ulCount++;
+    // Only store if there is room in the buffer (i.e. no-wrap case)
     if (This->usIdx < This->usDepth)
     {
-        This->axLine[This->usIdx].pcMessage = pcMessage;
-        This->axLine[This->usIdx].ulValue = ulValue;
+        // Step 3.1: get the current index and increment
+        uint16_t usIdx = This->usIdx;
         This->usIdx++;
         // If Trace Wrap is enabled, then reset index
         if (This->bIsWrap && This->usIdx >= This->usDepth)
         {
             This->usIdx = 0;
         }
+		// Step 3.2: Unlock the resource
+        TRACE_UNLOCK();
+        // Step 3.3: Store the trace line.  Assume there is enough time to write at slot before wrap
+#if defined(TRACE_GET_TICK)
+        This->axLine[usIdx].ulTimeStamp = TRACE_GET_TICK();  // Tick [in ms]
+#endif // defined(TRACE_GET_TICK)
+        This->axLine[usIdx].pcMessage = pcMessage;
+        This->axLine[usIdx].ulValue = ulValue;
     }
-    // Always count the number of trace calls
-    This->ulCount++;
-
-    TRACE_UNLOCK();
+	else
+	{
+		// Step 3: Unlock the resource
+        TRACE_UNLOCK();
+	}
 }
 
 #ifdef TRACE_OUTPUT
 void trace_dump(trace_t *This)
 {
     uint16_t usIdx, usIdy, usOffset;
+#if defined(TRACE_GET_TICK)
+    uint32_t ulLastStamp = 0;
+#endif // defined(TRACE_GET_TICK)
 
-    TRACE_LOCK();
+    TRACE_DUMP_LOCK();
 
     usOffset = (This->bIsWrap) ? This->usIdx : 0;
     TRACE_OUTPUT(TRACE_NEWLINE "====TRACE[%s] (total:%d, depth:%d)====  " TRACE_NEWLINE, This->name, This->ulCount, This->usDepth);
@@ -83,11 +100,17 @@ void trace_dump(trace_t *This)
         if (This->axLine[usIdy].pcMessage)
         {
             uint32_t ulValue = This->axLine[usIdy].ulValue;
+#if defined(TRACE_GET_TICK)
+            uint32_t ulStamp = This->axLine[usIdy].ulTimeStamp;
+            TRACE_OUTPUT("  %6d|%10d ms| %s: 0x%08x (%d)" TRACE_NEWLINE, usIdy, ulStamp - ulLastStamp, This->axLine[usIdy].pcMessage, ulValue, ulValue);
+            ulLastStamp = ulStamp;
+#else
             TRACE_OUTPUT("  %6d| %s: 0x%08x (%d)" TRACE_NEWLINE, usIdy, This->axLine[usIdy].pcMessage, ulValue, ulValue);
+#endif // defined(TRACE_GET_TICK)
         }
     }
 
-    TRACE_UNLOCK();
+    TRACE_DUMP_UNLOCK();
 }
 #else
 void trace_dump(trace_t *This) { This = This; }

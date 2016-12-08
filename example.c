@@ -25,6 +25,13 @@ SOFTWARE.
 
 #define TEST_TRACE_DEPTH    20
 
+// Step 0: This mimics a tick which is used for optional time stamping
+uint32_t fake_tick(void)
+{
+    static uint32_t ulTick = 0;
+    return ulTick += 10;
+}
+
 // Step 1: Define the trace buffer and trace object
 trace_line_t axTestBuffer[TEST_TRACE_DEPTH];
 trace_t xTestTrace;
