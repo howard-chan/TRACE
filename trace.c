@@ -35,16 +35,17 @@ SOFTWARE.
 /*********************** Macros ******************************/
 #undef  TRACE_CONFIG
 // NOTE: This macro creates the trace buffer objects in memory
-#define TRACE_CONFIG(trcName, depth, isWrap)    trace_line_t gaxTrace##trcName##Line[depth]; \
-                                                trace_t gxTrace##trcName = { \
-                                                    .usDepth = depth, \
-                                                    .bIsWrap = isWrap, \
-                                                    .usIdx = 0, \
-                                                    .ulCount = 0, \
-                                                    .axLine = gaxTrace##trcName##Line, \
-                                                    .name = #trcName, \
-                                                }; \
-                                                trace_t *gpxTrace##trcName = &gxTrace##trcName;
+#define TRACE_CONFIG(trcName, hdrName, depth, isWrap) \
+    trace_line_t gaxTrace##trcName##Line[depth]; \
+    trace_t gxTrace##trcName = { \
+        .usDepth = depth, \
+        .bIsWrap = isWrap, \
+        .usIdx = 0, \
+        .ulCount = 0, \
+        .axLine = gaxTrace##trcName##Line, \
+        .name = hdrName, \
+    }; \
+    trace_t *gpxTrace##trcName = &gxTrace##trcName;
 
 /********************* Configuration *************************/
 #ifdef TRACE_USE_CONFIG_FILE

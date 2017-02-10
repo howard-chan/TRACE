@@ -26,11 +26,11 @@ SOFTWARE.
 /* Step 2: Instantiate the trace buffer using the provided macros
  *   a) Create a custom config file (e.g. "trace_config.h")
  *   b) For each trace buffer, define the trace with the following macro:
- *     TRACE_CONFIG(<Trace Buffer Name>, <Depth of Trace Buffer>, <Wrap Mode>)
+ *     TRACE_CONFIG(<Trace Buffer Name>, <Header>, <Depth of Trace Buffer>, <Wrap Mode>)
  *     e.g.: To create an "Error" trace buffer that can store 8 traces with no wrap
- *       TRACE_CONFIG(Error, 8, false)
+ *       TRACE_CONFIG(Error, "Error Trace", 8, false)
  *     e.g.: To create an "Test" trace buffer that can store 20 traces with wrap
- *       TRACE_CONFIG(Test, 20, true)
+ *       TRACE_CONFIG(Test, "Test Trace", 20, true)
  */
-TRACE_CONFIG(Error, 8, false)
-TRACE_CONFIG(Test, 20, true)
+TRACE_CONFIG(Error, "Error Trace", 8, false)
+TRACE_CONFIG(Test, "Test Trace", 20, true)

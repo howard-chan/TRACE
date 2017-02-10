@@ -33,11 +33,11 @@ SOFTWARE.
  * Step 2: Instantiate the trace buffer using the provided macros
  *   a) Create a custom config file (e.g. "trace_config.h")
  *   b) For each trace buffer, define the trace with the following macro:
- *     TRACE_CONFIG(<Trace Buffer Name>, <Depth of Trace Buffer>, <Wrap Mode>)
+ *     TRACE_CONFIG(<Trace Buffer Name>, <Header>, <Depth of Trace Buffer>, <Wrap Mode>)
  *     e.g.: To create an "Error" trace buffer that can store 8 traces with no wrap
- *       TRACE_CONFIG(Error, 8, false)
+ *       TRACE_CONFIG(Error, "Error Trace", 8, false)
  *     e.g.: To create an "Test" trace buffer that can store 20 traces with wrap
- *       TRACE_CONFIG(Test, 20, true)
+ *       TRACE_CONFIG(Test, "Test Trace", 20, true)
  *
  * Step 3: Define TRACE_USE_CONFIG_FILE with the file in step 2 in the section below
  *     e.g.: #define TRACE_USE_CONFIG_FILE "trace_config.h"
@@ -99,16 +99,19 @@ extern uint32_t fake_tick(void);
 
 /*********************** Macros ******************************/
 #if TRACE_ENABLE
+
 /**
  * @brief      Configures the trace buffer
  *
  * @param      trcName  Name of Trace object
+ * @param      hdrName  Banner shown in trace dump
  * @param      depth    Depth of the trace buffer
  * @param      isWrap   true - wrap when full, false - stop tracing when full
  */
-#define TRACE_CONFIG(trcName, depth, isWrap)    extern trace_line_t gaxTrace##trcName##Line[depth]; \
-                                                extern trace_t gxTrace##trcName; \
-                                                extern trace_t *gpxTrace##trcName;
+#define TRACE_CONFIG(trcName, hdrName, depth, isWrap) \
+    extern trace_line_t gaxTrace##trcName##Line[depth]; \
+    extern trace_t gxTrace##trcName; \
+    extern trace_t *gpxTrace##trcName;
 
 /**
  * @brief      Traces the executedline in a file
@@ -141,7 +144,7 @@ extern uint32_t fake_tick(void);
  */
 #define TRACE_DUMP(trcName, reset)              trace_dump(gpxTrace##trcName, reset)
 #else
-#define TRACE_CONFIG(trcName, depth, isWrap)
+#define TRACE_CONFIG(trcName, hdrName, depth, isWrap)
 #define TRACE_FILE(trcName)
 #define TRACE_FUNC(trcName)
 #define TRACE(trcName, pcMessage, ulValue)
