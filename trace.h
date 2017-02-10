@@ -22,6 +22,39 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
+/*
+ * This is a lightweight TRACE buffer utility designed to instrument an embedded
+ * system like a printf, but stores the values to a buffer which can be dumped
+ * to a configured stdout or inspected directly with a JTAG.
+ *
+ * The following is the procedure to enable an application with TRACE feature
+ * Step 1: Configure the values in the Trace Configuration section below
+ *
+ * Step 2: Instantiate the trace buffer using the provided macros
+ *   a) Create a custom config file (e.g. "trace_config.h")
+ *   b) For each trace buffer, define the trace with the following macro:
+ *     TRACE_CONFIG(<Trace Buffer Name>, <Depth of Trace Buffer>, <Wrap Mode>)
+ *     e.g.: To create an "Error" trace buffer that can store 8 traces with no wrap
+ *       TRACE_CONFIG(Error, 8, false)
+ *     e.g.: To create an "Test" trace buffer that can store 20 traces with wrap
+ *       TRACE_CONFIG(Test, 20, true)
+ *
+ * Step 3: Define TRACE_USE_CONFIG_FILE with the file in step 2 in the section below
+ *     e.g.: #define TRACE_USE_CONFIG_FILE "trace_config.h"
+ *
+ * Step 4: Include trace.h to the source to be instrumented,
+ *     i.e.: #include "trace.h"
+ *
+ * Step 5: Use the following macros in your code to instrument execution:
+ *   TRACE_FILE(<Trace Buffer Name>)
+ *   TRACE_FUNC(<Trace Buffer Name>)
+ *   TRACE(<Trace Buffer Name>, <message>, <value>)
+ *
+ * Step 6: Dump the trace using TRACE_DUMP or inspect with JTAG
+ *   a) Call TRACE_DUMP(<Trace Buffer Name>, <reset>) to dump the contents of the trace buffer
+ *   b) With a JTAG debugger (e.g. JLinkDebugger), inspecting the global variables and
+ *      expanding them in the debugger will show human redable messages
+ */
 #ifndef __TRACE_H__
 #define __TRACE_H__
 
@@ -33,16 +66,13 @@ extern "C" {
 #include <stdint.h>
 #include <stdbool.h>
 
-/********************* Platform Headers *************************/
+/********************* Platform Configuration ****************/
+// Enable Trace
+#define TRACE_ENABLE            1
 // Add platform specific types here
-//----Trace Configuration [BEGIN]----
+//----Step 1: Trace Configuration [BEGIN]----
 // Sets the newline for host (i.e. linux - "\n", windows - "\r\n")
 #define TRACE_NEWLINE           "\n"
-
-// [OPTIONAL] Set TRACE_ERROR_DEPTH to non-zero to enable a default "error" trace
-#define TRACE_ERROR_DEPTH       8
-// [OPTIONAL] Set TRACE_ERROR_WRAP to wrap when buffer is full
-#define TRACE_ERROR_WRAP        false
 
 // [OPTIONAL] Define the following OS specific macros for thread safe operation
 // #include "your_os_mutex_or_semaphore_here.h"
@@ -57,32 +87,66 @@ extern "C" {
 #include <stdio.h>
 #define TRACE_OUTPUT(...)       printf(__VA_ARGS__)
 
-// [OPTIONAL] Define TRACE_GET_TICK to enable time stamping
+// [OPTIONAL] Step 1a: Define TRACE_GET_TICK to enable time stamping
 // This section maybe customized for platform specific debug facilities
 // #include "your_embedded_GET_TICK_here.h"
 extern uint32_t fake_tick(void);
 #define TRACE_GET_TICK          fake_tick
 
+// [OPTIONAL] Step 3: Use a customized "trace_config.h" file to define trace buffers
+#define TRACE_USE_CONFIG_FILE   "trace_config.h"
 //----Trace Configuration [END]----
 
 /*********************** Macros ******************************/
-//----Trace Macros----
-// Convenience macro to instrument code
-#define TRACE_FILE(pxTrace)                     trace(pxTrace, "--"__FILE__ " @ line", __LINE__)
-#define TRACE_FUNC(pxTrace)                     trace(pxTrace, (char *)__func__, __LINE__)
-// [OPTIONAL] This is a convenience macro for logging errors
-#if TRACE_ERROR_DEPTH
-    // Add this to the code to instrument
-    #define TRACE_ERROR(pcMessage, ulValue)     trace(&gxTraceError, pcMessage, ulValue)
-    // Add this at the very beginning to initialization
-    #define TRACE_ERROR_INIT()                  trace_init(&gxTraceError, "ERROR", gaxTraceErrorLine, TRACE_ERROR_DEPTH, TRACE_ERROR_WRAP)
-    #define TRACE_ERROR_DUMP()                  trace_dump(&gxTraceError)
-#else
-    #define TRACE_ERROR(pcMessage, ulValue)
-    #define TRACE_ERROR_INIT()
-    #define TRACE_ERROR_DUMP()
-#endif // TRACE_ERROR_DEPTH
+#if TRACE_ENABLE
+/**
+ * @brief      Configures the trace buffer
+ *
+ * @param      trcName  Name of Trace object
+ * @param      depth    Depth of the trace buffer
+ * @param      isWrap   true - wrap when full, false - stop tracing when full
+ */
+#define TRACE_CONFIG(trcName, depth, isWrap)    extern trace_line_t gaxTrace##trcName##Line[depth]; \
+                                                extern trace_t gxTrace##trcName; \
+                                                extern trace_t *gpxTrace##trcName;
 
+/**
+ * @brief      Traces the executedline in a file
+ *
+ * @param      trcName  Name of Trace object
+ */
+#define TRACE_FILE(trcName)                     trace(gpxTrace##trcName, "--"__FILE__ " @ line", __LINE__)
+
+/**
+ * @brief      Traces the executed line in a function
+ *
+ * @param      trcName  Name of Trace object
+ */
+#define TRACE_FUNC(trcName)                     trace(gpxTrace##trcName, (char *)__func__, __LINE__)
+
+/**
+ * @brief      Adds generic message string and value to trace buffer
+ *
+ * @param      trcName    Name of Trace object
+ * @param      pcMessage  Message string
+ * @param      ulValue    value to trace
+ */
+#define TRACE(trcName, pcMessage, ulValue)      trace(gpxTrace##trcName, pcMessage, ulValue)
+
+/**
+ * @brief      Dump the trace buffer to the configured output
+ *
+ * @param      trcName  Name of Trace object
+ * @param      reset    true - reset the buffer, otherwise false
+ */
+#define TRACE_DUMP(trcName, reset)              trace_dump(gpxTrace##trcName, reset)
+#else
+#define TRACE_CONFIG(trcName, depth, isWrap)
+#define TRACE_FILE(trcName)
+#define TRACE_FUNC(trcName)
+#define TRACE(trcName, pcMessage, ulValue)
+#define TRACE_DUMP(trcName, reset)
+#endif
 /*********************** Typedefs ****************************/
 // The trace line holds a single trace sample
 typedef struct
@@ -105,14 +169,13 @@ typedef struct
 } trace_t;
 
 /********************* Extern Variables **********************/
-// Default Error trace
-extern trace_t gxTraceError;
-extern trace_line_t gaxTraceErrorLine[TRACE_ERROR_DEPTH];
+#ifdef TRACE_USE_CONFIG_FILE
+#include TRACE_USE_CONFIG_FILE
+#endif // TRACE_USE_CONFIG_FILE
 
-//----Function Declarations----
 /********************* Exported Functions ********************/
 /**
- * @brief      Initialize the TRACE object
+ * @brief      Initialize or configure the TRACE object
  *
  * @param      This     Pointer to TRACE object
  * @param      name     Name of trace
@@ -135,11 +198,12 @@ void trace(trace_t *This, char *pcMessage, uint32_t ulValue);
  * @brief      Dump the contents of the trace buffer in order of oldest to
  *             newest.
  *
- * @param      This  Pointer to the TRACE object
+ * @param      This    Pointer to the TRACE object
+ * @param[in]  bReset  true - reset trace, false - leave as is
  *
  * @note       This feature is only available if TRACE_OUTPUT is defined
  */
-void trace_dump(trace_t *This);
+void trace_dump(trace_t *This, bool bReset);
 
 #ifdef __cplusplus
 }

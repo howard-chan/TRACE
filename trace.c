@@ -31,12 +31,28 @@ SOFTWARE.
 /********************* Local Headers *************************/
 #include "trace.h"
 
-/********************* Global Variables **********************/
-#if TRACE_ERROR_DEPTH
-trace_t gxTraceError;
-trace_line_t gaxTraceErrorLine[TRACE_ERROR_DEPTH];
-#endif // TRACE_ERROR_DEPTH
+#if TRACE_ENABLE
+/*********************** Macros ******************************/
+#undef  TRACE_CONFIG
+// NOTE: This macro creates the trace buffer objects in memory
+#define TRACE_CONFIG(trcName, depth, isWrap)    trace_line_t gaxTrace##trcName##Line[depth]; \
+                                                trace_t gxTrace##trcName = { \
+                                                    .usDepth = depth, \
+                                                    .bIsWrap = isWrap, \
+                                                    .usIdx = 0, \
+                                                    .ulCount = 0, \
+                                                    .axLine = gaxTrace##trcName##Line, \
+                                                    .name = #trcName, \
+                                                }; \
+                                                trace_t *gpxTrace##trcName = &gxTrace##trcName;
 
+/********************* Configuration *************************/
+#ifdef TRACE_USE_CONFIG_FILE
+#include TRACE_USE_CONFIG_FILE
+#endif // TRACE_USE_CONFIG
+
+/********************* Global Variables **********************/
+/********************* Exported Functions ********************/
 void trace_init(trace_t *This, char *name, trace_line_t *pxLine, uint16_t usDepth, bool bIsWrap)
 {
     This->usDepth = usDepth;
@@ -81,7 +97,7 @@ void trace(trace_t *This, char *pcMessage, uint32_t ulValue)
 }
 
 #ifdef TRACE_OUTPUT
-void trace_dump(trace_t *This)
+void trace_dump(trace_t *This, bool bReset)
 {
     uint16_t usIdx, usIdy, usOffset;
 #if defined(TRACE_GET_TICK)
@@ -97,7 +113,7 @@ void trace_dump(trace_t *This)
     {
         usIdy = (usOffset + usIdx) % This->usDepth;
         // Only print valid messages
-        if (This->axLine[usIdy].pcMessage)
+        if (This->axLine[usIdy].pcMessage && usIdy < This->ulCount)
         {
             uint32_t ulValue = This->axLine[usIdy].ulValue;
 #if defined(TRACE_GET_TICK)
@@ -109,9 +125,16 @@ void trace_dump(trace_t *This)
 #endif // defined(TRACE_GET_TICK)
         }
     }
+    // Reset the trace buffer for a new capture
+    if (bReset)
+    {
+        This->usIdx = 0;
+        This->ulCount = 0;
+    }
 
     TRACE_DUMP_UNLOCK();
 }
 #else
-void trace_dump(trace_t *This) { This = This; }
+void trace_dump(trace_t *This, bool bReset) { This = This; bReset = bReset; }
 #endif // TRACE_OUTPUT
+#endif // TRACE_ENABLE
