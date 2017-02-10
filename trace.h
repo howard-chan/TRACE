@@ -52,8 +52,9 @@ SOFTWARE.
  *
  * Step 6: Dump the trace using TRACE_DUMP or inspect with JTAG
  *   a) Call TRACE_DUMP(<Trace Buffer Name>, <reset>) to dump the contents of the trace buffer
+ *      NOTE: TRACE_OUTPUT must be defined for trace dump to work
  *   b) With a JTAG debugger (e.g. JLinkDebugger), inspecting the global variables and
- *      expanding them in the debugger will show human redable messages
+ *      expanding them in the debugger will show human redable messages.
  */
 #ifndef __TRACE_H__
 #define __TRACE_H__
@@ -67,8 +68,6 @@ extern "C" {
 #include <stdbool.h>
 
 /********************* Platform Configuration ****************/
-// Enable Trace
-#define TRACE_ENABLE            1
 // Add platform specific types here
 //----Step 1: Trace Configuration [BEGIN]----
 // Sets the newline for host (i.e. linux - "\n", windows - "\r\n")
@@ -98,8 +97,7 @@ extern uint32_t fake_tick(void);
 //----Trace Configuration [END]----
 
 /*********************** Macros ******************************/
-#if TRACE_ENABLE
-
+#ifdef TRACE_USE_CONFIG_FILE
 /**
  * @brief      Configures the trace buffer
  *
@@ -139,17 +137,33 @@ extern uint32_t fake_tick(void);
 /**
  * @brief      Dump the trace buffer to the configured output
  *
+ * @note       TRACE_OUTPUT and TRACE_USE_CONFIG_FILE must be defined to use
+ *             this feature
+ *
  * @param      trcName  Name of Trace object
  * @param      reset    true - reset the buffer, otherwise false
  */
 #define TRACE_DUMP(trcName, reset)              trace_dump(gpxTrace##trcName, reset)
+
+/**
+ * @brief      Dump the contents of all trace buffers instantiated with
+ *             TRACE_CONFIG() and TRACE_USE_CONFIG_FILE
+ *
+ * @note       TRACE_OUTPUT and TRACE_USE_CONFIG_FILE must be defined to use
+ *             this feature
+ *
+ * @param[in]  reset  true - reset trace, false - leave as is
+ */
+#define TRACE_DUMP_ALL(reset)                   trace_dump_all(reset)
 #else
 #define TRACE_CONFIG(trcName, hdrName, depth, isWrap)
 #define TRACE_FILE(trcName)
 #define TRACE_FUNC(trcName)
 #define TRACE(trcName, pcMessage, ulValue)
 #define TRACE_DUMP(trcName, reset)
-#endif
+#define TRACE_DUMP_ALL(reset)
+#endif // defined(TRACE_USE_CONFIG_FILE)
+
 /*********************** Typedefs ****************************/
 // The trace line holds a single trace sample
 typedef struct
@@ -207,6 +221,14 @@ void trace(trace_t *This, char *pcMessage, uint32_t ulValue);
  * @note       This feature is only available if TRACE_OUTPUT is defined
  */
 void trace_dump(trace_t *This, bool bReset);
+
+/**
+ * @brief      Dump the contents of all trace buffers instantiated with
+ *             TRACE_CONFIG() and TRACE_USE_CONFIG_FILE
+ *
+ * @param[in]  bReset  true - reset trace, false - leave as is
+ */
+void trace_dump_all(bool bReset);
 
 #ifdef __cplusplus
 }

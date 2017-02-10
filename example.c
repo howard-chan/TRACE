@@ -29,6 +29,7 @@ SOFTWARE.
 
 /*********************** Constants ***************************/
 #define TEST_TRACE_DEPTH  20
+#define MANUAL_TRACE_DEPTH  5
 
 /********************* Local Functions ***********************/
 // Step 1a: This mimics a tick which is used for optional time stamping
@@ -71,7 +72,25 @@ void test_func2(void)
 void main(void)
 {
     int idx;
-    TRACE(Test, "Test Start", 0);
+    // Example 1: Manually setting up trace buffer
+    printf("\nExample 1: Manually setting up the trace buffer\n");
+    trace_line_t gaxTraceManual[MANUAL_TRACE_DEPTH];
+    trace_t gxTraceManual;
+    trace_t *gpxTraceManual = &gxTraceManual;
+
+    trace_init(&gxTraceManual, "Manual Example", gaxTraceManual, MANUAL_TRACE_DEPTH, false);
+
+    trace(&gxTraceManual, "Start Manual Tracing", 0);
+    TRACE(Manual, "Using TRACE_FILE Macro", 2);
+    TRACE_FILE(Manual);
+    TRACE(Manual, "Using TRACE_FUNC Macro", 2);
+    TRACE_FUNC(Manual);
+
+    trace_dump(&gxTraceManual, true);
+
+    // Example 2: Automatically setting up trace buffer using TRACE_USE_CONFIG_FILE
+    printf("\nExample 2: Automatically setting up trace buffer using TRACE_USE_CONFIG_FILE\n");
+    TRACE(Test, "Start", 0);
     for (idx = 0; idx < TEST_TRACE_DEPTH + 6; idx++)
     {
         test_func1();
@@ -89,12 +108,12 @@ void main(void)
 
     // Try again with the buffers reset
     TRACE(Test, "Test Start Again", 0);
-    for (idx = 0; idx < 2; idx++)
+    for (idx = 0; idx < 4; idx++)
     {
         test_func1();
         test_func2();
     }
     TRACE(Test, "Test End Again", idx);
-    TRACE_DUMP(Error, false);
-    TRACE_DUMP(Test, false);
+    // Dump all traces
+    TRACE_DUMP_ALL(true);
 }

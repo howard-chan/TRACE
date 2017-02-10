@@ -31,11 +31,9 @@ SOFTWARE.
 /********************* Local Headers *************************/
 #include "trace.h"
 
-#if TRACE_ENABLE
 /*********************** Macros ******************************/
-#undef  TRACE_CONFIG
 // NOTE: This macro creates the trace buffer objects in memory
-#define TRACE_CONFIG(trcName, hdrName, depth, isWrap) \
+#define TRACE_INSTANTIATE(trcName, hdrName, depth, isWrap) \
     trace_line_t gaxTrace##trcName##Line[depth]; \
     trace_t gxTrace##trcName = { \
         .usDepth = depth, \
@@ -47,12 +45,26 @@ SOFTWARE.
     }; \
     trace_t *gpxTrace##trcName = &gxTrace##trcName;
 
+// NOTE: This macro is used to create an array of trace buffers
+#define TRACE_ELEMENT(trcName, hdrName, depth, isWrap)  &gxTrace##trcName,
+
 /********************* Configuration *************************/
+/********************* Global Variables **********************/
 #ifdef TRACE_USE_CONFIG_FILE
+// Instantiate the trace buffers
+#undef  TRACE_CONFIG
+#define TRACE_CONFIG    TRACE_INSTANTIATE
 #include TRACE_USE_CONFIG_FILE
+
+// Define the trace buffer array
+#undef  TRACE_CONFIG
+#define TRACE_CONFIG    TRACE_ELEMENT
+trace_t * gapxTraceAll[] =
+{
+    #include TRACE_USE_CONFIG_FILE
+};
 #endif // TRACE_USE_CONFIG
 
-/********************* Global Variables **********************/
 /********************* Exported Functions ********************/
 void trace_init(trace_t *This, char *name, trace_line_t *pxLine, uint16_t usDepth, bool bIsWrap)
 {
@@ -135,7 +147,18 @@ void trace_dump(trace_t *This, bool bReset)
 
     TRACE_DUMP_UNLOCK();
 }
+
+#ifdef TRACE_USE_CONFIG_FILE
+void trace_dump_all(bool bReset)
+{
+    int idx;
+    for (idx = 0; idx < sizeof(gapxTraceAll) / sizeof(gapxTraceAll[0]); idx++)
+    {
+        trace_dump(gapxTraceAll[idx], bReset);
+    }
+}
+#endif // TRACE_USE_CONFIG_FILE
 #else
 void trace_dump(trace_t *This, bool bReset) { This = This; bReset = bReset; }
+void trace_dump_all(void) {}
 #endif // TRACE_OUTPUT
-#endif // TRACE_ENABLE
